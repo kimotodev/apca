@@ -12,6 +12,8 @@ pub mod last_quotes;
 pub mod quotes;
 /// Definitions for real-time streaming of market data.
 pub mod stream;
+/// Definitions for retrieval of market data snapshots.
+pub mod snapshots;
 /// Definitions for retrieval of market data trades.
 pub mod trades;
 
