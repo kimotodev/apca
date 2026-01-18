@@ -36,3 +36,13 @@ pub enum CryptoLocation {
   #[serde(rename = "eu-1")]
   KrakenEU,
 }
+
+impl ToString for CryptoLocation {
+  fn to_string(&self) -> String {
+    match self {
+      CryptoLocation::AlpacaUS => "us".to_string(),
+      CryptoLocation::KrakenUS => "us-1".to_string(),
+      CryptoLocation::KrakenEU => "eu-1".to_string(),
+    }
+  }
+}

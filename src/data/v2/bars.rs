@@ -305,8 +305,7 @@ Endpoint! {
   }
 
   fn path(input: &Self::Input) -> Str {
-    let loc_str = serde_urlencoded::to_string(&input.loc).unwrap();
-    format!("/v1beta3/crypto/{}/bars", loc_str).into()
+    format!("/v1beta3/crypto/{}/bars", input.loc.to_string()).into()
   }
 
   fn query(input: &Self::Input) -> Result<Option<Str>, Self::ConversionError> {
