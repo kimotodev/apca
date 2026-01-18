@@ -15,4 +15,4 @@ pub mod stream;
 /// Definitions for retrieval of market data trades.
 pub mod trades;
 
-pub use feed::Feed;
+pub use feed::{CryptoLocation, Feed};

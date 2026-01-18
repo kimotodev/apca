@@ -21,3 +21,18 @@ pub enum Feed {
   #[serde(rename = "sip")]
   SIP,
 }
+
+/// An enumeration of the different supported crypto data feeds
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+pub enum CryptoLocation {
+  /// Use the Alpaca US crypto data feed.
+  #[serde(rename = "us")]
+  AlpacaUS,
+  /// Use the Kraken US crypto data feed.
+  #[serde(rename = "us-1")]
+  KrakenUS,
+  /// Use the Kraken EU crypto data feed.
+  #[serde(rename = "eu-1")]
+  KrakenEU,
+}

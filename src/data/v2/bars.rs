@@ -10,7 +10,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use serde_urlencoded::to_string as to_query;
 
-use crate::data::v2::Feed;
+use crate::data::v2::{CryptoLocation, Feed};
 use crate::data::DATA_BASE_URL;
 use crate::util::vec_from_str;
 use crate::Str;
@@ -134,6 +134,79 @@ impl ListReqInit {
   }
 }
 
+/// A GET request to be issues to the /v1beta3/crypto/{loc}/bars endpoint.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct ListCryptoReq {
+  /// The symbols for which to retrieve market data.
+  pub symbols: Vec<String>,
+  /// The maximum number of bars to be returned per page.
+  ///
+  /// It can be between 1 and 1000. Defaults to 1000 if the provided
+  /// value is None.
+  #[serde(rename = "limit")]
+  pub limit: Option<usize>,
+  /// Filter bars equal to or after this time.
+  #[serde(rename = "start")]
+  pub start: DateTime<Utc>,
+  /// Filter bars equal to or before this time.
+  #[serde(rename = "end")]
+  pub end: DateTime<Utc>,
+  /// The time frame for the bars.
+  #[serde(rename = "timeframe")]
+  pub timeframe: TimeFrame,
+  /// The crypto feed to use
+  ///
+  /// Defaults to [`AlpacaUS`][CryptoLocation::AlpacaUS].
+  #[serde(skip)]
+  pub loc: CryptoLocation,
+  /// If provided we will pass a page token to continue where we left off.
+  #[serde(rename = "page_token", skip_serializing_if = "Option::is_none")]
+  pub page_token: Option<String>,
+  /// The type is non-exhaustive and open to extension.
+  #[doc(hidden)]
+  #[serde(skip)]
+  pub _non_exhaustive: (),
+}
+
+/// A helper for initializing [`ListCryptoReq`] objects.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ListCryptoReqInit {
+  /// See `ListCryptoReq::limit`.
+  pub limit: Option<usize>,
+  /// See `ListCryptoReq::loc`.
+  pub loc: Option<CryptoLocation>,
+  /// See `ListCryptoReq::page_token`.
+  pub page_token: Option<String>,
+  /// The type is non-exhaustive and open to extension.
+  #[doc(hidden)]
+  pub _non_exhaustive: (),
+}
+
+impl ListCryptoReqInit {
+  /// Create a [`ListCryptoReq`] from a `ListCryptoReqInit`.
+  #[inline]
+  pub fn init<S>(
+    self,
+    symbols: Vec<S>,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+    timeframe: TimeFrame,
+  ) -> ListCryptoReq
+  where
+    S: Into<String>,
+  {
+    ListCryptoReq {
+      symbols: symbols.into_iter().map(Into::into).collect(),
+      start,
+      end,
+      timeframe,
+      limit: self.limit,
+      loc: self.loc.unwrap_or(CryptoLocation::AlpacaUS),
+      page_token: self.page_token,
+      _non_exhaustive: (),
+    }
+  }
+}
 
 /// A market data bar as returned by the /v2/stocks/{symbol}/bars endpoint.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
@@ -156,6 +229,9 @@ pub struct Bar {
   /// The trading volume.
   #[serde(rename = "v")]
   pub volume: usize,
+  /// The number of trades.
+  #[serde(rename = "n")]
+  pub trade_count: Option<usize>,
   /// The volume weighted average price.
   #[serde(rename = "vw")]
   pub weighted_average: Num,
@@ -212,6 +288,31 @@ Endpoint! {
   }
 }
 
+Endpoint! {
+  /// The representation of a GET request to the /v1beta3/crypto/{loc}/bars endpoint.
+  pub ListCrypto(ListCryptoReq),
+  Ok => Bars, [
+    /// The market data was retrieved successfully.
+    /* 200 */ OK,
+  ],
+  Err => ListCryptoError, [
+    /// A query parameter was invalid.
+    /* 400 */ BAD_REQUEST => InvalidInput,
+  ]
+
+  fn base_url() -> Option<Str> {
+    Some(DATA_BASE_URL.into())
+  }
+
+  fn path(input: &Self::Input) -> Str {
+    let loc_str = serde_urlencoded::to_string(&input.loc).unwrap();
+    format!("/v1beta3/crypto/{}/bars", loc_str).into()
+  }
+
+  fn query(input: &Self::Input) -> Result<Option<Str>, Self::ConversionError> {
+    Ok(Some(to_query(input)?.into()))
+  }
+}
 
 #[cfg(test)]
 mod tests {
