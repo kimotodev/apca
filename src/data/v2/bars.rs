@@ -1,6 +1,8 @@
 // Copyright (C) 2021-2024 The apca Developers
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::collections::HashMap;
+
 use chrono::DateTime;
 use chrono::Utc;
 
@@ -229,7 +231,7 @@ pub struct Bar {
   pub low: Num,
   /// The trading volume.
   #[serde(rename = "v")]
-  pub volume: usize,
+  pub volume: Num,
   /// The number of trades.
   #[serde(rename = "n")]
   pub trade_count: Option<usize>,
@@ -263,6 +265,29 @@ pub struct Bars {
   pub _non_exhaustive: (),
 }
 
+/// A collection of bars for multiple symbols as returned by the API. This is
+/// one page of bars.
+#[derive(Debug, Deserialize, Eq, PartialEq)]
+pub struct MultiSymbolBars {
+  /// The list of returned bars per symbol.
+  #[serde(rename = "bars")]
+  pub bars: HashMap<String, Vec<Bar>>,
+  /// The token to provide to a request to get the next page of bars for
+  /// this request.
+  #[serde(rename = "next_page_token")]
+  pub next_page_token: Option<String>,
+  /// The type is non-exhaustive and open to extension.
+  #[doc(hidden)]
+  #[serde(skip)]
+  pub _non_exhaustive: (),
+}
+
+impl MultiSymbolBars {
+  /// Get the bars for a specific symbol, if any were returned.
+  pub fn get_bars_for_symbol(&self, symbol: &str) -> Option<&Vec<Bar>> {
+    self.bars.get(symbol)
+  }
+}
 
 Endpoint! {
   /// The representation of a GET request to the /v2/stocks/{symbol}/bars endpoint.
@@ -292,7 +317,7 @@ Endpoint! {
 Endpoint! {
   /// The representation of a GET request to the /v1beta3/crypto/{loc}/bars endpoint.
   pub ListCrypto(ListCryptoReq),
-  Ok => Bars, [
+  Ok => MultiSymbolBars, [
     /// The market data was retrieved successfully.
     /* 200 */ OK,
   ],
@@ -595,5 +620,68 @@ mod tests {
       RequestError::Endpoint(ListError::InvalidInput(Ok(_))) => (),
       _ => panic!("Received unexpected error: {err:?}"),
     };
+  }
+
+  #[test]
+  fn parse_reference_crypto_bars() {
+    let response = r#"{
+      "bars": {
+        "BTC/USD": [{
+          "t": "2023-01-01T00:00:00Z",
+          "o": 16500.0,
+          "h": 16600.0,
+          "l": 16400.0,
+          "c": 16550.0,
+          "v": 100,
+          "vw": 16525.0
+        }]
+      },
+      "next_page_token": null
+    }"#;
+
+    let res = serde_json::from_str::<<ListCrypto as Endpoint>::Output>(response).unwrap();
+    let bars = res.get_bars_for_symbol("BTC/USD").unwrap();
+    let expected_time = DateTime::<Utc>::from_str("2023-01-01T00:00:00Z").unwrap();
+    assert_eq!(bars.len(), 1);
+    assert_eq!(bars[0].time, expected_time);
+    assert_eq!(bars[0].open, Num::new(1650000, 100));
+    assert_eq!(bars[0].close, Num::new(1655000, 100));
+    assert_eq!(bars[0].high, Num::new(1660000, 100));
+    assert_eq!(bars[0].low, Num::new(1640000, 100));
+    assert_eq!(bars[0].weighted_average, Num::new(1652500, 100));
+    assert!(res.next_page_token.is_none());
+  }
+
+  /// Check that we can decode a response containing no crypto bars correctly.
+  #[test(tokio::test)]
+  async fn no_crypto_bars() {
+    let api_info = ApiInfo::from_env().unwrap();
+    let client = Client::new(api_info);
+    let start = DateTime::from_str("2010-01-01T00:00:00Z").unwrap();
+    let end = DateTime::from_str("2010-01-01T00:00:00Z").unwrap();
+    let request = ListCryptoReqInit::default().init("BTC/USD", start, end, TimeFrame::OneDay);
+
+    let res = client.issue::<ListCrypto>(&request).await.unwrap();
+    assert_eq!(res.bars, HashMap::new());
+  }
+
+  /// Check that we can request historic crypto bar data.
+  #[test(tokio::test)]
+  async fn request_crypto_bars() {
+    let api_info = ApiInfo::from_env().unwrap();
+    let client = Client::new(api_info);
+    let start = DateTime::from_str("2023-01-01T00:00:00Z").unwrap();
+    let end = DateTime::from_str("2023-01-03T00:00:00Z").unwrap();
+    let request = ListCryptoReqInit {
+      limit: Some(2),
+      ..Default::default()
+    }
+    .init("BTC/USD", start, end, TimeFrame::OneDay);
+
+    let res = client.issue::<ListCrypto>(&request).await.unwrap();
+    let bars_len = res.bars.len();
+
+    assert!(bars_len <= 2);
+    assert!(res.bars.get("BTC/USD").is_some());
   }
 }
