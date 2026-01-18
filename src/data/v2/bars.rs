@@ -138,7 +138,8 @@ impl ListReqInit {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct ListCryptoReq {
   /// The symbols for which to retrieve market data.
-  pub symbols: Vec<String>,
+  #[serde(rename = "symbols")]
+  pub symbol: String,
   /// The maximum number of bars to be returned per page.
   ///
   /// It can be between 1 and 1000. Defaults to 1000 if the provided
@@ -187,7 +188,7 @@ impl ListCryptoReqInit {
   #[inline]
   pub fn init<S>(
     self,
-    symbols: Vec<S>,
+    symbol: S,
     start: DateTime<Utc>,
     end: DateTime<Utc>,
     timeframe: TimeFrame,
@@ -196,7 +197,7 @@ impl ListCryptoReqInit {
     S: Into<String>,
   {
     ListCryptoReq {
-      symbols: symbols.into_iter().map(Into::into).collect(),
+      symbol: symbol.into(),
       start,
       end,
       timeframe,
