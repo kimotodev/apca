@@ -74,6 +74,8 @@ pub struct Account {
   /// The account's status.
   #[serde(rename = "status")]
   pub status: Status,
+  /// Account number
+  pub account_number: String,
   /// The currency the account uses.
   #[serde(rename = "currency")]
   pub currency: String,

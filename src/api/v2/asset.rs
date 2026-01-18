@@ -341,6 +341,9 @@ pub struct Asset {
   /// The asset's symbol.
   #[serde(rename = "symbol")]
   pub symbol: String,
+  /// The asset's name, if available.
+  #[serde(rename = "name")]
+  pub name: Option<String>,
   /// The asset's status.
   #[serde(rename = "status")]
   pub status: Status,
