@@ -277,7 +277,7 @@ impl Client {
     async move {
       let request = result.map_err(RequestError::Endpoint)?;
       let span = span!(
-        Level::INFO,
+        Level::TRACE,
         "issue",
         method = display(request.method()),
         uri = display(request.uri())
