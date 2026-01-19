@@ -267,6 +267,7 @@ impl<T> NonTradeActivityImpl<T> {
     let Self {
       id,
       type_: _,
+      sub_type,
       date,
       net_amount,
       symbol,
@@ -280,6 +281,7 @@ impl<T> NonTradeActivityImpl<T> {
     NonTradeActivityImpl::<U> {
       id,
       type_: activity_type,
+      sub_type,
       date,
       net_amount,
       symbol,
