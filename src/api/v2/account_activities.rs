@@ -223,6 +223,13 @@ pub struct NonTradeActivityImpl<T> {
   /// Note that the `Fill` variant will never be used here.
   #[serde(rename = "activity_type")]
   pub type_: T,
+  /// A more specific sub-type of the activity.
+  ///
+  /// For example, for an INT (interest) activity type, the sub-type
+  /// specifies if it's a MARGIN interest payment or a CASH interest
+  /// credit
+  #[serde(rename = "activity_sub_type")]
+  pub sub_type: Option<String>,
   /// The date on which the activity occurred or on which the
   /// transaction associated with the activity settled.
   #[serde(rename = "date", deserialize_with = "datetime_from_date_str")]
